@@ -30,11 +30,13 @@ git add .
 # Commit changes
 git commit -m "<write your commit message>"
 
-# Push to remote (after adding remote origin)
-git push
-
 # Cloning the repository
-git clone https://github.com/sunnysavita10/document_portal.git
+git branch -M main
+git remote add origin https://github.com/amana-nkit/document_portal.git
+
+# Push to remote (after adding remote origin)
+git push -u origin main
+
 ```
 ## Minimum Requirements for the Project
 
