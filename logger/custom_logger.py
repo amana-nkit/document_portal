@@ -45,11 +45,6 @@ class CustomLogger:
 
         return structlog.get_logger(logger_name)
 
-# Processor	    Purpose
-#  TimeStamper	Adds a UTC ISO timestamp
-#  add_log_level	Adds "level": "info" or "error"
-#  EventRenamer	Renames the message key from event to event (clarifies naming for output)
-#  JSONRenderer	Converts everything to a compact JSON string
 
 # --- Usage Example ---
 if __name__ == "__main__":
