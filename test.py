@@ -125,10 +125,10 @@ def test_conversational_rag_on_pdf(pdf_path:str, question:str):
                 uploaded_files = [f]
                 ingestor = SingleDocIngestor()
                 retriever = ingestor.ingest_files(uploaded_files)
+                
         print("Running Conversational RAG...")
         session_id = "test_conversational_rag"
         rag = ConversationalRAG(retriever=retriever, session_id=session_id)
-        
         response = rag.invoke(question)
         print(f"\nQuestion: {question}\nAnswer: {response}")
                     
@@ -139,7 +139,7 @@ def test_conversational_rag_on_pdf(pdf_path:str, question:str):
 if __name__ == "__main__":
     # Example PDF path and question
     pdf_path = "data\\single_document_chat\\NIPS-2017-attention-is-all-you-need-Paper.pdf"
-    question = "What is the main topic of the document?"
+    question = "What is the significance of the attention mechanism? can you explain it in simple terms?"
 
     if not Path(pdf_path).exists():
         print(f"PDF file does not exist at: {pdf_path}")
