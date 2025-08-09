@@ -20,10 +20,10 @@ class DocumentAnalyzer:
             self.llm=self.loader.load_llm()
             
             # Prepare parsers
-            self.parser = JsonOutputParser(pydantic_object=Metadata) #Tells LangChain to parse the LLM's output into a Metadata Pydantic model.
-            self.fixing_parser = OutputFixingParser.from_llm(parser=self.parser, llm=self.llm) # If the LLM output isn't perfectly formatted, this wrapper tries to fix and parse it again.
+            self.parser = JsonOutputParser(pydantic_object=Metadata)
+            self.fixing_parser = OutputFixingParser.from_llm(parser=self.parser, llm=self.llm)
             
-            self.prompt = PROMPT_REGISTRY["document_analysis"] # Loads a specific prompt for document analysis from a central registry.
+            self.prompt = PROMPT_REGISTRY["document_analysis"]
             
             self.log.info("DocumentAnalyzer initialized successfully")
             
