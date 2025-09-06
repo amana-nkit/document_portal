@@ -20,15 +20,12 @@ faiss_index/
 *.faiss
 *.pkl
 
-# Notebooks & experiments
-*.ipynb
-.ipynb_checkpoints/
-
 # Data & archive
 data/
 archive/
 main_archive/
 *.pdf
+notebook/
 
 # Secrets & configs
 .env
