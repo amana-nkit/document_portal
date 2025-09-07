@@ -18,23 +18,27 @@ from src.document_chat.retrieval import ConversationalRAG
 from utils.document_ops import FastAPIFileAdapter,read_pdf_via_handler
 from logger import GLOBAL_LOGGER as log
 
-FAISS_BASE = os.getenv("FAISS_BASE", "faiss_index")
-UPLOAD_BASE = os.getenv("UPLOAD_BASE", "data")
+FAISS_BASE = os.getenv("FAISS_BASE", "faiss_index") # where vector indexes are stored
+UPLOAD_BASE = os.getenv("UPLOAD_BASE", "data") # where uploaded docs are stored.
 FAISS_INDEX_NAME = os.getenv("FAISS_INDEX_NAME", "index")  # <--- keep consistent with save_local()
 
-app = FastAPI(title="Document Portal API", version="0.1")
+app = FastAPI(title="Document Portal API", version="0.1") # Creates FastAPI app.
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates")) # Static files (/static) + Jinja2 templates (/templates) for UI.
 
-app.add_middleware(
+app.add_middleware(   # Adds CORS middleware → allows frontend (Streamlit/React/anything) to call APIs.
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+#=============== Endpoints =================
+
+# ---------- UI Homepage ----------
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_ui(request: Request):
@@ -43,13 +47,18 @@ async def serve_ui(request: Request):
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
+# Serves index.html from templates.Cache disabled for fresh load each time.
+
+# ---------- HEALTH CHECK ----------
 @app.get("/health")
 def health() -> Dict[str, str]:
     log.info("Health check passed.")
     return {"status": "ok", "service": "document-portal"}
 
+# health endpoint for readiness/liveness probes
+
 # ---------- ANALYZE ----------
-@app.post("/analyze")
+@app.post("/analyze") # Upload a file → saves it → extracts text → runs DocumentAnalyzer (LLM-powered) → returns insights
 async def analyze_document(file: UploadFile = File(...)) -> Any:
     try:
         log.info(f"Received file for analysis: {file.filename}")
@@ -67,7 +76,7 @@ async def analyze_document(file: UploadFile = File(...)) -> Any:
         raise HTTPException(status_code=500, detail=f"Analysis failed: {e}")
 
 # ---------- COMPARE ----------
-@app.post("/compare")
+@app.post("/compare") # Upload two docs → save → combine → LLM-powered comparison → returns structured diff (as DataFrame).
 async def compare_documents(reference: UploadFile = File(...), actual: UploadFile = File(...)) -> Any:
     try:
         log.info(f"Comparing files: {reference.filename} vs {actual.filename}")
@@ -88,7 +97,10 @@ async def compare_documents(reference: UploadFile = File(...), actual: UploadFil
         raise HTTPException(status_code=500, detail=f"Comparison failed: {e}")
 
 # ---------- CHAT: INDEX ----------
-@app.post("/chat/index")
+# Upload docs → creates ChatIngestor → chunks + embeds docs → stores in FAISS.
+#Returns session info (so chat queries can reference the right FAISS index).
+
+@app.post("/chat/index") 
 async def chat_build_index(
     files: List[UploadFile] = File(...),
     session_id: Optional[str] = Form(None),
