@@ -19,7 +19,7 @@ from utils.document_ops import load_documents, concat_for_analysis, concat_for_c
 
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".txt"}
 
-# FAISS Manager (load-or-create)
+# FAISS Manager (load-or-create). core class for managing your semantic search index
 class FaissManager:
     def __init__(self, index_dir: Path, model_loader: Optional[ModelLoader] = None):
         self.index_dir = Path(index_dir)
@@ -27,6 +27,11 @@ class FaissManager:
         
         self.meta_path = self.index_dir / "ingested_meta.json"
         self._meta: Dict[str, Any] = {"rows": {}} ## this is dict of rows
+
+        # index_dir: Directory where FAISS index and metadata will be stored.
+        # Creates index_dir if it doesn’t exist.
+        # meta_path: Path to a JSON file that stores metadata about ingested docs.
+        # _meta: Keeps track of unique documents that have been indexed (to avoid duplicates).
         
         if self.meta_path.exists():
             try:
@@ -34,14 +39,19 @@ class FaissManager:
             except Exception:
                 self._meta = {"rows": {}} # init the empty one if dones not exists
         
+        # If metadata file exists, load it.If corrupt/missing, reset to an empty dict.
 
         self.model_loader = model_loader or ModelLoader()
         self.emb = self.model_loader.load_embeddings()
         self.vs: Optional[FAISS] = None
+
+        # Loads an embedding model (via a ModelLoader).Initializes the FAISS vector store.
         
     def _exists(self)-> bool:
         return (self.index_dir / "index.faiss").exists() and (self.index_dir / "index.pkl").exists()
-    
+     
+        # Verifies if a FAISS index has already been created (index.faiss, index.pkl files).
+
     @staticmethod
     def _fingerprint(text: str, md: Dict[str, Any]) -> str:
         src = md.get("source") or md.get("file_path")
@@ -50,9 +60,14 @@ class FaissManager:
             return f"{src}::{'' if rid is None else rid}"
         return hashlib.sha256(text.encode("utf-8")).hexdigest()
     
+       # Creates a unique ID (fingerprint) for each document:
+       # Preferably from source + row_id metadata.Otherwise, uses SHA-256 hash of the content.
+       # Ensures no duplicate ingestion.
+    
     def _save_meta(self):
         self.meta_path.write_text(json.dumps(self._meta, ensure_ascii=False, indent=2), encoding="utf-8")
         
+       # Persists the _meta dictionary back into ingested_meta.json.
         
     def add_documents(self,docs: List[Document]):
         
@@ -75,6 +90,10 @@ class FaissManager:
             self._save_meta()
         return len(new_docs)
     
+    # Ensures FAISS is loaded/created before adding.For each document:Generate fingerprint.
+    # If already exists → skip (idempotent ingestion).Else add it to FAISS and update metadata.
+    # Saves both index and metadata after ingestion.
+
     def load_or_create(self,texts:Optional[List[str]]=None, metadatas: Optional[List[dict]] = None):
         ## if we running first time then it will not go in this block
         if self._exists():
@@ -91,14 +110,21 @@ class FaissManager:
         self.vs = FAISS.from_texts(texts=texts, embedding=self.emb, metadatas=metadatas or [])
         self.vs.save_local(str(self.index_dir))
         return self.vs
+    
+    # If index exists → load FAISS store from disk.Else if no index but texts provided → create new index from those texts + embeddings.
+    # Always save the index locally for persistence.
         
         
-class ChatIngestor:
+class ChatIngestor:  # Upload Files → Save → Load → Split → Embed + Store in FAISS → Return Retriever
     def __init__( self,
         temp_base: str = "data",
         faiss_base: str = "faiss_index",
         use_session_dirs: bool = True,
         session_id: Optional[str] = None,
+
+       # Loads the embedding model using ModelLoader.
+       # Supports sessions (so each chat/session can have its own isolated index).
+       # If no session_id provided → auto-generates one.
     ):
         try:
             self.model_loader = ModelLoader()
@@ -124,7 +150,7 @@ class ChatIngestor:
         
     def _resolve_dir(self, base: Path):
         if self.use_session:
-            d = base / self.session_id # e.g. "faiss_index/abc123"
+            d = base / self.session_id # e.g. If session-based, appends the session ID,"faiss_index/abc123"
             d.mkdir(parents=True, exist_ok=True) # creates dir if not exists
             return d
         return base # fallback: "faiss_index/"
@@ -134,6 +160,9 @@ class ChatIngestor:
         chunks = splitter.split_documents(docs)
         log.info("Documents split", chunks=len(chunks), chunk_size=chunk_size, overlap=chunk_overlap)
         return chunks
+    
+    # Splits long documents into overlapping chunks (default: 1000 tokens, overlap 200).
+    # Ensures context is preserved for embeddings and retrieval.
     
     def built_retriver( self,
         uploaded_files: Iterable,
@@ -147,8 +176,12 @@ class ChatIngestor:
             if not docs:
                 raise ValueError("No valid documents loaded")
             
+        # Saves uploaded files into temp_dir.Loads them into Document objects.
+            
             chunks = self._split(docs, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
             
+            #Splits docs into chunks.Initializes FaissManager with session’s FAISS directory.
+            # Prepares texts and metadata.
             ## FAISS manager very very important class for the docchat
             fm = FaissManager(self.faiss_dir, self.model_loader)
             
@@ -163,6 +196,7 @@ class ChatIngestor:
             added = fm.add_documents(chunks)
             log.info("FAISS index updated", added=added, index=str(self.faiss_dir))
             
+            # Adds new docs idempotently (no duplicates).Returns a retriever that can fetch top-k most similar chunks for chat.
             return vs.as_retriever(search_type="similarity", search_kwargs={"k": k})
             
         except Exception as e:
