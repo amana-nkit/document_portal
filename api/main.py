@@ -37,6 +37,7 @@ app.add_middleware(   # Adds CORS middleware → allows frontend (Streamlit/Reac
 )
 
 #=============== Endpoints =================
+## Routes for UI homepage, health check, analyze, compare, chat index, chat query.
 
 # ---------- UI Homepage ----------
 
