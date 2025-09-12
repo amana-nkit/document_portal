@@ -34,7 +34,7 @@
 
     {
       "name": "GOOGLE_API_KEY",
-      "valueFrom": "arn:aws:secretsmanager:us-east-1:398081819809:secret:GOOGLE_API_KEY"
+      "valueFrom": "arn:aws:secretsmanager:us-east-1:398081819809:secret:GROQ_API_KEY-LbMag8"
     }
         
       ],
