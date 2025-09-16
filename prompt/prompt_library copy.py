@@ -2,42 +2,13 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 # Prompt for document analysis
 document_analysis_prompt = ChatPromptTemplate.from_template("""
-You are a financial analyst. Below is a company's balance sheet data:
-
-{document_text}
-
-Your task is to analyze it and provide a structured summary with the following sections:
-
-1. **Company & Period**  
-   - Identify the company name and year(s) from the document text.  
-
-2. **Assets**  
-   - Major components (current assets, fixed assets, investments, etc.).  
-   - Growth or decline compared to previous year(s).  
-
-3. **Liabilities**  
-   - Breakdown (current liabilities, long-term liabilities).  
-   - Any major increase/decrease or risk factors.  
-
-4. **Borrowings**  
-   - Short-term and long-term borrowings.  
-   - Debt-to-equity implications.  
-
-5. **Reserves & Surplus**  
-   - General reserves, retained earnings, or other reserves.  
-   - Contribution to net worth.  
-
-6. **Earnings/Net Worth**  
-   - Shareholder’s equity position.  
-   - Indication of company’s financial strength.  
-
-7. **Overall Summary**  
-   - Key insights into company’s financial health.  
-   - Any red flags or strengths.  
-
+You are a highly capable assistant trained to analyze and summarize documents.
 Return ONLY valid JSON matching the exact schema below.
 
 {format_instructions}
+
+Analyze this document:
+{document_text}
 """)
 
 # Prompt for document comparison
