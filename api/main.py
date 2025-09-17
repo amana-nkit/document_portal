@@ -58,44 +58,85 @@ def health() -> Dict[str, str]:
 
 # health endpoint for readiness/liveness probes
 
-# ---------- ANALYZE ----------
-@app.post("/analyze") # Upload a file → saves it → extracts text → runs DocumentAnalyzer (LLM-powered) → returns insights
-async def analyze_document(file: UploadFile = File(...)) -> Any:
+# # ---------- ANALYZE ----------
+# @app.post("/analyze") # Upload a file → saves it → extracts text → runs DocumentAnalyzer (LLM-powered) → returns insights
+# async def analyze_document(file: UploadFile = File(...)) -> Any:
+#     try:
+#         log.info(f"Received file for analysis: {file.filename}")
+#         dh = DocHandler()
+#         saved_path = dh.save_file(FastAPIFileAdapter(file))
+#         text = dh.read_text(saved_path)   # <-- fixed (removed extra dh)
+#         analyzer = DocumentAnalyzer()
+#         result = analyzer.analyze_document(text)
+#         log.info("Document analysis complete.")
+#         return JSONResponse(content=result)
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         log.exception("Error during document analysis")
+#         raise HTTPException(status_code=500, detail=f"Analysis failed: {e}")
+    
+# ---------- ANALYZE MULTIPLE DOCS (COMBINED) ----------
+# ---------- ANALYZE MULTIPLE DOCS (LLM-powered) ----------
+@app.post("/analyze")
+async def analyze(
+    files: List[UploadFile] = File(...),
+    mode: str = Form("per-file")
+):
+    """
+    Upload one or more files and analyze them with LLM.
+    mode: 'per-file' → each file separately
+          'combined' → merge all files and analyze once
+    """
     try:
-        log.info(f"Received file for analysis: {file.filename}")
         dh = DocHandler()
-        saved_path = dh.save_file(FastAPIFileAdapter(file))
-        text = dh.read_text(saved_path)   # <-- fixed (removed extra dh)
         analyzer = DocumentAnalyzer()
-        result = analyzer.analyze_document(text)
-        log.info("Document analysis complete.")
-        return JSONResponse(content=result)
+        results = []
+
+        if mode == "per-file":
+            for f in files:
+                # Save uploaded file to disk
+                saved_path = dh.save_file(FastAPIFileAdapter(f))
+                # Extract text
+                text = dh.read_text(saved_path)
+                # Run LLM analyzer
+                result = analyzer.analyze_document(text)
+                results.append({
+                    "filename": f.filename,
+                    "analysis": result
+                })
+
+        elif mode == "combined":
+            combined_text = ""
+            for f in files:
+                saved_path = dh.save_file(FastAPIFileAdapter(f))
+                combined_text += dh.read_text(saved_path) + "\n"
+
+            result = analyzer.analyze_document(combined_text)
+            results.append({
+                "filenames": [f.filename for f in files],
+                "analysis": result
+            })
+
+        else:
+            raise HTTPException(status_code=400, detail="Invalid mode")
+
+        return {"mode": mode, "results": results}
+
     except HTTPException:
         raise
     except Exception as e:
         log.exception("Error during document analysis")
         raise HTTPException(status_code=500, detail=f"Analysis failed: {e}")
 
-# ---------- COMPARE ----------
-@app.post("/compare") # Upload two docs → save → combine → LLM-powered comparison → returns structured diff (as DataFrame).
-async def compare_documents(reference: UploadFile = File(...), actual: UploadFile = File(...)) -> Any:
-    try:
-        log.info(f"Comparing files: {reference.filename} vs {actual.filename}")
-        dc = DocumentComparator()
-        ref_path, act_path = dc.save_uploaded_files(
-            FastAPIFileAdapter(reference), FastAPIFileAdapter(actual)
-        )
-        _ = ref_path, act_path
-        combined_text = dc.combine_documents()
-        comp = DocumentComparatorLLM()
-        df = comp.compare_documents(combined_text)
-        log.info("Document comparison completed.")
-        return {"rows": df.to_dict(orient="records"), "session_id": dc.session_id}
-    except HTTPException:
-        raise
-    except Exception as e:
-        log.exception("Comparison failed")
-        raise HTTPException(status_code=500, detail=f"Comparison failed: {e}")
+# @app.post("/analyze/combined")
+# async def analyze_combined(files: List[UploadFile] = File(...)):
+#     combined_text = ""
+#     for f in files:
+#         text = await f.read()
+#         combined_text += text.decode("utf-8", errors="ignore") + "\n"
+#     # Run combined analysis on all files
+#     return {"mode": "combined", "length": len(combined_text)}
 
 # ---------- CHAT: INDEX ----------
 # Upload docs → creates ChatIngestor → chunks + embeds docs → stores in FAISS.
