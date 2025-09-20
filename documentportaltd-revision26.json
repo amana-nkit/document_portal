@@ -1,0 +1,96 @@
+{
+    "compatibilities": [
+        "EC2",
+        "FARGATE"
+    ],
+    "containerDefinitions": [
+        {
+            "cpu": 1024,
+            "environment": [
+                {
+                    "name": "ENV",
+                    "value": "production"
+                }
+            ],
+            "essential": true,
+            "image": "398081819809.dkr.ecr.us-east-1.amazonaws.com/documentregistry:55fed2c7408f6493d317e927d46e96b6a8d7d4c7",
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/documentportaltd",
+                    "awslogs-create-group": "true",
+                    "awslogs-region": "us-east-1",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "mountPoints": [],
+            "name": "document-portal-container",
+            "portMappings": [
+                {
+                    "appProtocol": "http",
+                    "containerPort": 8080,
+                    "hostPort": 8080,
+                    "name": "document-portal-container-8080-tcp",
+                    "protocol": "tcp"
+                }
+            ],
+            "secrets": [
+                {
+                    "name": "GROQ_API_KEY",
+                    "valueFrom": "arn:aws:secretsmanager:us-east-1:398081819809:secret:GROQ_API_KEY-LbMag8"
+                },
+                {
+                    "name": "GOOGLE_API_KEY",
+                    "valueFrom": "arn:aws:secretsmanager:us-east-1:398081819809:secret:GOOGLE_API_KEY-q1eRvx"
+                }
+            ],
+            "systemControls": [],
+            "volumesFrom": []
+        }
+    ],
+    "cpu": "1024",
+    "executionRoleArn": "arn:aws:iam::398081819809:role/ecsTaskExecutionRole",
+    "family": "documentportaltd",
+    "memory": "8192",
+    "networkMode": "awsvpc",
+    "placementConstraints": [],
+    "registeredAt": "2025-09-17T18:09:13.557Z",
+    "registeredBy": "arn:aws:iam::398081819809:user/github-cicd",
+    "requiresAttributes": [
+        {
+            "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
+        },
+        {
+            "name": "ecs.capability.execution-role-awslogs"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.ecr-auth"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
+        },
+        {
+            "name": "ecs.capability.secrets.asm.environment-variables"
+        },
+        {
+            "name": "ecs.capability.execution-role-ecr-pull"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
+        },
+        {
+            "name": "ecs.capability.task-eni"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.29"
+        }
+    ],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "revision": 26,
+    "status": "ACTIVE",
+    "taskDefinitionArn": "arn:aws:ecs:us-east-1:398081819809:task-definition/documentportaltd:26",
+    "volumes": [],
+    "tags": []
+}
