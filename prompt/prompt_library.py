@@ -6,39 +6,69 @@ You are a financial analyst. Below is a company's balance sheet data:
 
 {document_text}
 
-Your task is to analyze it and provide a structured summary with the following sections:
+Your task is to analyze it and provide a structured summary in **tabular format only**.  
+
+Generate tables for the following sections:
 
 1. **Company & Period**  
-   - Identify the company name and year(s) from the document text.  
+   | Company | Period |
 
 2. **Assets**  
-   - Major components (current assets, fixed assets, investments, etc.).  
-   - Growth or decline compared to previous year(s).  
+   | Asset Type | Value | YoY Change / Trend |
 
 3. **Liabilities**  
-   - Breakdown (current liabilities, long-term liabilities).  
-   - Any major increase/decrease or risk factors.  
+   | Liability Type | Value | YoY Change / Risk Factors |
 
 4. **Borrowings**  
-   - Short-term and long-term borrowings.  
-   - Debt-to-equity implications.  
+   | Borrowing Type | Value | Debt-to-Equity Impact |
 
 5. **Reserves & Surplus**  
-   - General reserves, retained earnings, or other reserves.  
-   - Contribution to net worth.  
+   | Reserve Type | Value | Contribution to Net Worth |
 
-6. **Earnings/Net Worth**  
-   - Shareholder’s equity position.  
-   - Indication of company’s financial strength.  
+6. **Earnings / Net Worth**  
+   | Metric | Value | Financial Strength |
 
 7. **Overall Summary**  
-   - Key insights into company’s financial health.  
-   - Any red flags or strengths.  
+   | Insight | Details |
 
-Return ONLY valid JSON matching the exact schema below.
-
-{format_instructions}
+⚠️ Output Rules:  
+- Return tables in **Markdown tables** (or HTML tables if formatting better fits).  
+- No JSON, no extra commentary, no explanations.
+- Use `N/A` where information is missing.  
 """)
+
+
+# 1. **Company & Period**  
+#    - Identify the company name and year(s) from the document text.  
+
+# 2. **Assets**  
+#    - Major components (current assets, fixed assets, investments, etc.).  
+#    - Growth or decline compared to previous year(s).  
+
+# 3. **Liabilities**  
+#    - Breakdown (current liabilities, long-term liabilities).  
+#    - Any major increase/decrease or risk factors.  
+
+# 4. **Borrowings**  
+#    - Short-term and long-term borrowings.  
+#    - Debt-to-equity implications.  
+
+# 5. **Reserves & Surplus**  
+#    - General reserves, retained earnings, or other reserves.  
+#    - Contribution to net worth.  
+
+# 6. **Earnings/Net Worth**  
+#    - Shareholder’s equity position.  
+#    - Indication of company’s financial strength.  
+
+# 7. **Overall Summary**  
+#    - Key insights into company’s financial health.  
+#    - Any red flags or strengths.  
+
+# Return ONLY valid JSON matching the exact schema below.
+
+# {format_instructions}
+# """)
 
 # Prompt for document comparison
 document_comparison_prompt = ChatPromptTemplate.from_template("""

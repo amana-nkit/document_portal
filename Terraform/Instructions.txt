@@ -1,0 +1,34 @@
+Initialize Terraform:
+
+cd infra
+terraform init
+
+
+Create/select workspace:
+
+terraform workspace new aws   # or terraform workspace select aws
+
+Apply for AWS (pass image and any AWS vars):
+
+terraform apply -var="image_uri=123456789012.dkr.ecr.us-east-1.amazonaws.com/documentregistry:mytag" -var="cloud=aws" -auto-approve
+
+For Azure:
+
+terraform workspace new azure
+terraform apply -var="image_uri=myacr.azurecr.io/documentregistry:mytag" -var="cloud=azure" -auto-approve \
+  -var="azure_subscription_id=..." -var="azure_client_id=..." -var="azure_client_secret=..." -var="azure_tenant_id=..."
+
+
+# Notes & next steps (must-reads)
+
+Networking for AWS: I used default_subnet_id and default_security_group_id placeholders in the AWS module for simplicity. In production you should create a VPC, subnets, and security groups in Terraform or pass existing ones (recommended).
+
+IAM hardening: Execution role in the AWS module is minimal; you should adjust policies for ECR pull, CloudWatch logs, secrets access, etc.
+
+Image registry: Terraform modules assume image_uri is reachable from the target cloud. CI must push the image to the appropriate registry and you must pass that image_uri.
+
+State storage: Use remote state (S3 + DynamoDB for AWS; Azure Storage for Azure) for production. Currently terraform uses local state file.
+
+Secrets: Use GitHub Secrets (or Vault) to store credentials not inline in workflows.
+
+Scaling & health: Add ALB/Ingress rules, autoscaling, health checks for production.

@@ -1,0 +1,109 @@
+# Place this in .github/workflows/deploy.yml
+
+name: Build and Deploy (Terraform)
+
+on:
+  workflow_run:
+    workflows: ["Run Unit Tests"]
+    types: [completed]
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  ECR_REPOSITORY: documentregistry
+  ACR_NAME: myacrname
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Build image
+      - name: Build Docker image
+        run: docker build -t repo:latest .
+
+      # Login + push to ECR (example)
+      - name: Configure AWS creds
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Login to ECR
+        id: ecr_login
+        run: |
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+
+      - name: Tag & push to ECR
+        run: |
+          IMAGE_URI=${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          docker tag repo:latest $IMAGE_URI
+          docker push $IMAGE_URI
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+
+      # Optionally push to ACR too
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Tag & push to ACR
+        run: |
+          ACR_REG=${{ env.ACR_NAME }}.azurecr.io
+          IMAGE_URI_ACR=$ACR_REG/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+          docker tag repo:latest $IMAGE_URI_ACR
+          docker push $IMAGE_URI_ACR
+          echo "IMAGE_URI_ACR=$IMAGE_URI_ACR" >> $GITHUB_ENV
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Init Terraform
+        run: terraform -chdir=infra init
+
+      # choose workspace either aws or azure; create if missing
+      - name: Select Terraform workspace (AWS)
+        run: |
+          terraform -chdir=infra workspace new aws || true
+          terraform -chdir=infra workspace select aws
+      - name: Apply for AWS
+        env:
+          TF_VAR_image_uri: ${{ env.IMAGE_URI }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          terraform -chdir=infra apply -auto-approve \
+            -var="image_uri=${{ env.IMAGE_URI }}" \
+            -var="cloud=aws"
+
+      # To deploy to azure you can add a separate step (or separate run) switching workspace to azure:
+      - name: Select Terraform workspace (Azure)
+        run: |
+          terraform -chdir=infra workspace new azure || true
+          terraform -chdir=infra workspace select azure
+      - name: Apply for Azure
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          terraform -chdir=infra apply -auto-approve \
+            -var="image_uri=${{ env.IMAGE_URI_ACR }}" \
+            -var="cloud=azure" \
+            -var="azure_subscription_id=${{ secrets.AZURE_SUBSCRIPTION_ID }}" \
+            -var="azure_tenant_id=${{ secrets.AZURE_TENANT_ID }}" \
+            -var="azure_client_id=${{ secrets.AZURE_CLIENT_ID }}" \
+            -var="azure_client_secret=${{ secrets.AZURE_CLIENT_SECRET }}"

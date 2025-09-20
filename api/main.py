@@ -104,7 +104,8 @@ async def analyze(
                 results.append({
                     "filename": f.filename,
                     "analysis": result
-                })
+                }
+                )
 
         elif mode == "combined":
             combined_text = ""
