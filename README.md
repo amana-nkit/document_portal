@@ -1,9 +1,6 @@
 # Document Portal
 
 A FastAPI-based Document Portal for uploading, analyzing, comparing, and chatting with documents using Retrieval-Augmented Generation (RAG). The project supports multiple document formats, multimodal retrieval (text, tables, images) via Unstructured.io + LangChain MultiVector, and includes authentication, pre-commit testing, and CI.
-
-> See the companion assignment write-up: [Assignment.md](./Assignment.md)
-
 ---
 
 ## Features
